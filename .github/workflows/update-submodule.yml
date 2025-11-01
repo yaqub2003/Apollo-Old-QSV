@@ -24,7 +24,7 @@ jobs:
       - name: Checkout branch dist inside the submodule
         run: |
           cd third-party/build-deps
-          git checkout dist
+          git checkout --track origin/dist --
           cd ../..
 
       - name: Update submodule pointer to latest commit
