@@ -1,0 +1,42 @@
+name: Update submodule pointer
+
+on:
+  workflow_dispatch:   # кнопка "Run workflow" в Actions
+
+jobs:
+  update-submodule:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.GH_TOKEN }}
+          fetch-depth: 0
+
+      - name: Sync submodule config
+        run: git submodule sync --recursive
+
+      - name: Fetch remote branches inside submodule
+        run: git submodule foreach 'git fetch --all'
+
+      - name: Checkout branch dist inside the submodule
+        run: |
+          cd third-party/build-deps
+          git checkout dist
+          cd ../..
+
+      - name: Update submodule pointer to latest commit
+        run: git submodule update --remote --recursive
+
+      - name: Commit changes if any
+        run: |
+          git config user.name "${{ secrets.GH_NAME }}"
+          git config user.email "${{ secrets.GH_EMAIL }}"
+
+          git add .
+          git commit -m "Update submodule pointer" || echo "No changes"
+
+      - name: Push
+        run: git push
