@@ -702,32 +702,40 @@ namespace video {
       {
         {"preset"s, &config::video.qsv.qsv_preset},
         {"cavlc"s, &config::video.qsv.qsv_cavlc},
-        {"forced_idr"s, 1},
-        {"async_depth"s, 1},
-        {"low_delay_brc"s, 1},
-        {"low_power"s, 1},
+        {"rc"s, "cbr"s},                 // стабильный CBR для 1080p60
+        {"forced_idr"s, 1},              // IDR по ключевому кадру
+        {"g"s, 60},                      // GOP = 60 (1 сек. при 60 FPS)
+        {"bf"s, 0},                      // без B-frames → минимальная задержка
+        {"refs"s, 2},                    // рефкадры (баланс латентности/стабильности)
+        {"low_delay_brc"s, 0},           // на Ivy нестабильно → выкл
+        {"low_power"s, 0},               // VDENC отсутствует → выкл
+        {"vcm"s, 0},                     // ломает Ivy → выкл
+        {"pic_timing_sei"s, 0},          // микроплюс к латентности
         {"recovery_point_sei"s, 0},
-        {"vcm"s, 1},
-        {"pic_timing_sei"s, 0},
-        {"max_dec_frame_buffering"s, 1},
+        {"max_dec_frame_buffering"s, 0}, // не раздувать буферы декодера
+        {"async_depth"s, 1},             // минимально допустимая задержка и стабильность
       },
       {
         // SDR-specific options
         {"profile"s, (int) qsv::profile_h264_e::high},
       },
-      {},  // HDR-specific options
+      {},  // HDR-specific options (unsupported by HD 4000)
       {
-        // YUV444 SDR-specific options
-        {"profile"s, (int) qsv::profile_h264_e::high_444p},
+        // YUV444 SDR-specific options (disable: unsupported)
+        // REMOVE high_444p
       },
-      {},  // YUV444 HDR-specific options
+      {},  // YUV444 HDR (unsupported)
       {
-        // Fallback options
-        {"low_power"s, 0},  // Some old/low-end Intel GPUs don't support low power encoding
+        // Fallback options (super conservative)
+        {"rc"s, "cbr"s},
+        {"bf"s, 0},
+        {"low_power"s, 0},
+        {"vcm"s, 0},
+        {"async_depth"s, 1},
       },
       "h264_qsv"s,
     },
-    PARALLEL_ENCODING | CBR_WITH_VBR | RELAXED_COMPLIANCE | NO_RC_BUF_LIMIT | YUV444_SUPPORT
+    RELAXED_COMPLIANCE | NO_RC_BUF_LIMIT
   };
 
   encoder_t amdvce {
