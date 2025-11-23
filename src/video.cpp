@@ -713,11 +713,12 @@ namespace video {
         {"pic_timing_sei"s, 0},          // микроплюс к латентности
         {"recovery_point_sei"s, 0},
         {"max_dec_frame_buffering"s, 0}, // не раздувать буферы декодера
-        {"async_depth"s, 1},             // минимально допустимая задержка и стабильность
+        {"async_depth"s, 2},             // минимально допустимая задержка и стабильность
       },
       {
         // SDR-specific options
         {"profile"s, (int) qsv::profile_h264_e::high},
+        {"level"s, 42},
       },
       {},  // HDR-specific options (unsupported by HD 4000)
       {
@@ -735,7 +736,7 @@ namespace video {
       },
       "h264_qsv"s,
     },
-    RELAXED_COMPLIANCE | NO_RC_BUF_LIMIT
+    PARALLEL_ENCODING | H264_ONLY | LIMITED_GOP_SIZE | SINGLE_SLICE_ONLY | ASYNC_TEARDOWN
   };
 
   encoder_t amdvce {
@@ -1945,7 +1946,7 @@ namespace video {
     double minimum_fps_target = (config::video.minimum_fps_target > 0.0) ? config::video.minimum_fps_target * 1000 : std::max(config.encodingFramerate / 5, 10000);
     auto max_frametime = std::chrono::nanoseconds(1000ms) * 1000 / minimum_fps_target;
     auto encode_frame_threshold = std::chrono::nanoseconds(1000ms) * 1000 / config.encodingFramerate;
-    auto frame_variation_threshold = encode_frame_threshold / 4;
+    auto frame_variation_threshold = encode_frame_threshold / 2;
     auto min_frame_diff = encode_frame_threshold - frame_variation_threshold;
     BOOST_LOG(info) << "Minimum FPS target set to ~"sv << (minimum_fps_target / 2000) << "fps ("sv << max_frametime * 2 << ")"sv;
     BOOST_LOG(info) << "Encoding Frame threshold: "sv << encode_frame_threshold;
@@ -2028,7 +2029,7 @@ namespace video {
           auto current_timestamp = *frame_timestamp;
           auto time_diff = current_timestamp - encode_frame_timestamp;
 
-          // If new frame comes in way too fast, just drop
+          // If new frame comes *way* too fast, drop; keep small early arrivals
           if (time_diff < -frame_variation_threshold) {
             continue;
           }
